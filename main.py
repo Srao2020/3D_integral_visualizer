@@ -121,8 +121,8 @@ def update_result():
         z_lower = float(z_lower_entry.get())
         z_upper = float(z_upper_entry.get())
         order = order_combobox.get()
-        steps = int(steps_entry.get())
-        interval = int(interval_entry.get())
+        steps = int(steps_slider.get())
+        interval = int(interval_slider.get())
 
         bounds = {
             'x': (x_lower, x_upper),
@@ -181,12 +181,14 @@ order_combobox.set("dx, dy, dz")
 order_combobox.grid(row=7, column=1)
 
 tk.Label(root, text="Steps:").grid(row=8, column=0)
-steps_entry = tk.Entry(root)
-steps_entry.grid(row=8, column=1)
+steps_slider = tk.Scale(root, from_=2, to=30, orient='horizontal')
+steps_slider.set(10)
+steps_slider.grid(row=8, column=1)
 
-tk.Label(root, text="Interval (ms):").grid(row=9, column=0)
-interval_entry = tk.Entry(root)
-interval_entry.grid(row=9, column=1)
+tk.Label(root, text="Animation Speed (ms):").grid(row=9, column=0)
+interval_slider = tk.Scale(root, from_=10, to=1000, resolution=10, orient='horizontal')
+interval_slider.set(200)
+interval_slider.grid(row=9, column=1)
 
 calc_button = tk.Button(root, text="Calculate and Plot", command=update_result)
 calc_button.grid(row=10, column=0, columnspan=2)

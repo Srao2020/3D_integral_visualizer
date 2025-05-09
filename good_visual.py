@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.animation import FuncAnimation
+import itertools
 
 def plot_region(x_range, y_range, z_range, function, order, steps, interval):
     for widget in plot_frame.winfo_children():
@@ -23,72 +24,59 @@ def plot_region(x_range, y_range, z_range, function, order, steps, interval):
     ax.set_ylim(y_range[0], y_range[1])
     ax.set_zlim(z_range[0], z_range[1])
 
-    x_step = (x_range[1] - x_range[0]) / steps
-    y_step = (y_range[1] - y_range[0]) / steps
-    z_step = (z_range[1] - z_range[0]) / steps
-
-    order_map = {
-        'dx, dy, dz': ('x', 'y', 'z'),
-        'dx, dz, dy': ('x', 'z', 'y'),
-        'dy, dx, dz': ('y', 'x', 'z'),
-        'dy, dz, dx': ('y', 'z', 'x'),
-        'dz, dx, dy': ('z', 'x', 'y'),
-        'dz, dy, dx': ('z', 'y', 'x'),
-    }
-
-    dim_order = order_map[order]
-
-    idx_ranges = {
-        'x': (x_range, x_step),
-        'y': (y_range, y_step),
-        'z': (z_range, z_step)
-    }
-
-    def get_coord(var, i):
-        return idx_ranges[var][0][0] + i * idx_ranges[var][1]
-
-    # Generate correct traversal order with nested loops
-    def generate_traversal(order, steps):
-        ranges = [range(steps) for _ in range(3)]
-        loops = dict(zip(order, ranges))
-        traversal = []
-
-        for i in loops[order[2]]:
-            for j in loops[order[1]]:
-                for k in loops[order[0]]:
-                    index = {order[0]: k, order[1]: j, order[2]: i}
-                    traversal.append(index)
-
-        return traversal
-
-    traversal = generate_traversal(dim_order, steps)
-    bars_drawn = {}
+    bars = []
 
     def update(frame):
-        if frame >= len(traversal):
-            return
+        for bar in bars:
+            bar.remove()
+        bars.clear()
 
-        index = traversal[frame]
-        i, j, k = index.get('x', 0), index.get('y', 0), index.get('z', 0)
+        x_step = (x_range[1] - x_range[0]) / steps
+        y_step = (y_range[1] - y_range[0]) / steps
+        z_step = (z_range[1] - z_range[0]) / steps
 
-        x_val = get_coord('x', i)
-        y_val = get_coord('y', j)
-        z_val = get_coord('z', k)
+        order_map = {
+            'dx, dy, dz': ('x', 'y', 'z'),
+            'dx, dz, dy': ('x', 'z', 'y'),
+            'dy, dx, dz': ('y', 'x', 'z'),
+            'dy, dz, dx': ('y', 'z', 'x'),
+            'dz, dx, dy': ('z', 'x', 'y'),
+            'dz, dy, dx': ('z', 'y', 'x'),
+        }
 
-        height = f_numeric(x_val, y_val, z_val)
-        key = (i, j, k)
+        dim_order = order_map[order]
 
-        if key not in bars_drawn:
-            bar = ax.bar3d(x_val, y_val, 0, x_step, y_step, height,
-                           color='orange', edgecolor='k', alpha=0.6)
-            bars_drawn[key] = bar
+        idx_ranges = {
+            'x': (x_range, x_step),
+            'y': (y_range, y_step),
+            'z': (z_range, z_step)
+        }
 
-        ax.set_title(f"Frame {frame + 1} / {len(traversal)} - Order: {order}")
+        def get_coord(var, i):
+            return idx_ranges[var][0][0] + i * idx_ranges[var][1]
+
+        max_frames = steps * 3
+        phase = frame // steps
+        step = frame % steps + 1
+
+        for i1 in range(step if phase >= 0 else 0):
+            for i2 in range(step if phase >= 1 else 1):
+                for i3 in range(step if phase >= 2 else 1):
+                    idx = {dim_order[0]: i1, dim_order[1]: i2, dim_order[2]: i3}
+                    x_val = get_coord('x', idx['x']) if 'x' in idx else x_range[0]
+                    y_val = get_coord('y', idx['y']) if 'y' in idx else y_range[0]
+                    z_val = get_coord('z', idx['z']) if 'z' in idx else z_range[0]
+
+                    height = f_numeric(x_val, y_val, z_val)
+                    bar = ax.bar3d(x_val, y_val, 0, x_step, y_step, height, color='orange', edgecolor='k', alpha=0.6)
+                    bars.append(bar)
+
+        ax.set_title(f"Step {frame + 1} - Order: {order}")
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")
 
-    anim = FuncAnimation(fig, update, frames=len(traversal), interval=interval, repeat=False)
+    anim = FuncAnimation(fig, update, frames=steps * 3, interval=interval, repeat=False)
     canvas.draw()
 
 def calculate_integral(function, bounds, order):
